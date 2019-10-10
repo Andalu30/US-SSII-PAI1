@@ -1,8 +1,14 @@
 import hashlib
 import os
-from crontab import CronTab
+import logging
 from time import sleep
 from daemonize import Daemonize
+
+
+logFilename = "test.log"
+
+
+logging.basicConfig(filename=logFilename,level=logging.DEBUG,format='%(asctime)s:%(levelname)s:%(message)s')
 
 
 tiempoEsperaDemonio = 0
@@ -10,7 +16,7 @@ tiempoEsperaDemonio = 0
 
 def ConfigFile():
     def creaConfigFile():
-        print("Creando archivo de configuración. Defina los archivos que hay que comprobar.")
+        logging.debug("Creando archivo de configuración. Defina los archivos que hay que comprobar.")
         os.makedirs("/etc/SSII-PAI1/", 0o0755)
         string_config=";Algoritmo\n" \
                      "SHA1\n" \
@@ -31,7 +37,7 @@ def ConfigFile():
 
 
 
-        print("Cargando archivo de configuración")
+        logging.debug("Cargando archivo de configuración")
         text_file = open("/etc/SSII-PAI1/SSIIPAI1.cfg", "r")
 
         argumentos = []
@@ -42,7 +48,7 @@ def ConfigFile():
                 line.rstrip()
         archivos = argumentos[3:]
 
-        print(argumentos[1])
+        logging.debug(argumentos[1])
         tiempoEsperaDemonio = configuraDemonio(argumentos[1])
 
 
@@ -58,14 +64,8 @@ def ConfigFile():
 
 
 
-
-
-
-
-    
-
-
     if(os.path.isfile("/etc/SSII-PAI1/SSIIPAI1.cfg")):
+        # Si existe el archivo de configuracion leerlo y continuar, sino, crearlo
         leeConfigFile()
     else:
         creaConfigFile()
@@ -81,14 +81,28 @@ def getHashfromFile(tipoHash, archivos,comprueba=False):
             hash = hashlib.sha1(open(archivo).read().encode('utf-8'))
             hashes.append(hash.hexdigest())
             print(hashes)
-    else:
-        print("Fuck this shit im out")
-        # TODO!!!
-
+    elif tipoHash == "MD5":
+            hashes = []
+            for archivo in archivos:
+                hash = hashlib.md5(open(archivo).read().encode('utf-8'))
+                hashes.append(hash.hexdigest())
+                print(hashes)
+    elif tipoHash == "SHA256":
+            hashes = []
+            for archivo in archivos:
+                hash = hashlib.sha256(open(archivo).read().encode('utf-8'))
+                hashes.append(hash.hexdigest())
+                print(hashes)
+    elif tipoHash == "SHA512":
+        hashes = []
+        for archivo in archivos:
+            hash = hashlib.sha512(open(archivo).read().encode('utf-8'))
+            hashes.append(hash.hexdigest())
+            print(hashes)
 
 
     if comprueba == False:
-        print("Guardando nuevos hashes en el archivo de cofiguración")
+        logging.debug("Guardando nuevos hashes en el archivo de cofiguración")
         text_file = open("/etc/SSII-PAI1/hashes.cfg", "w")
         for hash in hashes:
             text_file.write(hash + "\n")
@@ -112,13 +126,24 @@ def compruebaSHAs(tipoHash, archivos):
         hashesGuardados.append(line.strip("\n"))
 
     hahesArchivos = []
-    if tipoHash  == "SHA1":
+    if tipoHash == "SHA1":
         for archivo in archivos:
             hash = hashlib.sha1(open(archivo).read().encode("UTF-8"))
             hahesArchivos.append(hash.hexdigest())
+    elif tipoHash == "MD5":
+        for archivo in archivos:
+            hash = hashlib.md5(open(archivo).read().encode("UTF-8"))
+            hahesArchivos.append(hash.hexdigest())
+    elif tipoHash == "SHA256":
+        for archivo in archivos:
+            hash = hashlib.sha256(open(archivo).read().encode("UTF-8"))
+            hahesArchivos.append(hash.hexdigest())
+    elif tipoHash == "SHA512":
+        for archivo in archivos:
+            hash = hashlib.sha512(open(archivo).read().encode("UTF-8"))
+            hahesArchivos.append(hash.hexdigest())
 
-
-    print(hahesArchivos, hashesGuardados)
+    logging.debug(hahesArchivos, hashesGuardados)
 
     fallos = []
     for i in range(len(hahesArchivos)):
@@ -135,11 +160,11 @@ def compruebaSHAs(tipoHash, archivos):
 
 
 def todoBien():
-    print("Todo bien de momento :)")
+    logging.debug("Todo bien de momento :)")
 
 def generaIncidentes(fallos,archivos):
     for fallo in fallos:
-        print("El archivo {} ha fallado".format(archivos[fallo]))
+        logging.warning("El archivo {} ha fallado".format(archivos[fallo]))
 
 def generaKPIs(fallos,archivos):
   pass
@@ -157,19 +182,23 @@ def configuraDemonio(tiempoString):
         tiempo = tiempoString[:-1]
     elif tiempoString.endswith("d"):
         tiempo = 3600*24*tiempoString[:-1]
-        print(tiempo)
+        logging.debug("Tiempo: {}".format(tiempo))
     return tiempo
 
 
 
 def bucleDemonio():
     ConfigFile()
-    print(tiempoEsperaDemonio)
+    logging.log(tiempoEsperaDemonio)
     sleep(tiempoEsperaDemonio)
 
 
-pid = "/tmp/test.pid"
-daemon = Daemonize(app="PAI1", pid=pid, action=bucleDemonio())
-daemon.start()
+
+logging.debug("Hello World")
+
+
+# pid = "/tmp/test.pid"
+# daemon = Daemonize(app="PAI1", pid=pid, action=bucleDemonio())
+# daemon.start()
 
 
