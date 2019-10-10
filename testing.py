@@ -21,13 +21,14 @@ def ConfigFile():
         string_config=";Algoritmo\n" \
                      "SHA1\n" \
                      ";Tiempo\n" \
-                     "24h\n" \
+                     "1m\n" \
                      ";Nombre Fichero salida\n" \
                      "SSIIoutput\n" \
                       ";Ficheros\n"
         text_file = open("/etc/SSII-PAI1/SSIIPAI1.cfg", "w")
         text_file.write(string_config)
         text_file.close()
+        tiempoEsperaDemonio=60
 
     def leeConfigFile():
 
@@ -80,25 +81,21 @@ def getHashfromFile(tipoHash, archivos,comprueba=False):
         for archivo in archivos:
             hash = hashlib.sha1(open(archivo).read().encode('utf-8'))
             hashes.append(hash.hexdigest())
-            print(hashes)
     elif tipoHash == "MD5":
             hashes = []
             for archivo in archivos:
                 hash = hashlib.md5(open(archivo).read().encode('utf-8'))
                 hashes.append(hash.hexdigest())
-                print(hashes)
     elif tipoHash == "SHA256":
             hashes = []
             for archivo in archivos:
                 hash = hashlib.sha256(open(archivo).read().encode('utf-8'))
                 hashes.append(hash.hexdigest())
-                print(hashes)
     elif tipoHash == "SHA512":
         hashes = []
         for archivo in archivos:
             hash = hashlib.sha512(open(archivo).read().encode('utf-8'))
             hashes.append(hash.hexdigest())
-            print(hashes)
 
 
     if comprueba == False:
@@ -189,16 +186,19 @@ def configuraDemonio(tiempoString):
 
 def bucleDemonio():
     ConfigFile()
-    logging.log(tiempoEsperaDemonio)
+    logging.debug(tiempoEsperaDemonio)
     sleep(tiempoEsperaDemonio)
 
 
 
-logging.debug("Hello World")
 
+def main():
+    while True:
+        ConfigFile()
+        sleep(30)
 
-# pid = "/tmp/test.pid"
-# daemon = Daemonize(app="PAI1", pid=pid, action=bucleDemonio())
-# daemon.start()
+pid = "/tmp/test.pid"
+daemon = Daemonize(app="PAI1", pid=pid, action=main())
+daemon.start()
 
 
