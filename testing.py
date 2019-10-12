@@ -1,17 +1,21 @@
 import hashlib
 import os
 import logging
+from cryptography.fernet import Fernet
 from time import sleep
 from daemonize import Daemonize
 
 
-logFilename = "test.log"
-
-
+logFilename = "PAI1.log"
 logging.basicConfig(filename=logFilename,level=logging.DEBUG,format='%(asctime)s:%(levelname)s:%(message)s')
 
+key = Fernet.generate_key()
+logging.debug(key) #TODO: quitar esto para seguridad
+fernet = Fernet(key)
 
-tiempoEsperaDemonio = 0
+
+tiempoEsperaDemonio = 30
+
 
 
 def ConfigFile():
@@ -33,8 +37,18 @@ def ConfigFile():
     def leeConfigFile():
 
         def cantidadHashesGuardos():
-            text_file = open("/etc/SSII-PAI1/hashes.cfg", "r")
-            return len(text_file.readlines())
+
+            file = open("/etc/SSII-PAI1/hashes.cfg", "rb")
+            encrypted = file.read()
+            file.close()
+            decrypted = fernet.decrypt(encrypted)
+            logging.debug(decrypted.decode('utf-8'))
+            logging.debug("CantidadHashesGuardados: {}".format(len(decrypted.decode("utf-8").split('\n'))))
+            logging.debug(decrypted.decode("utf-8").split('\n'))
+            return len(decrypted.decode("utf-8").split('\n'))
+
+            # text_file = open("/etc/SSII-PAI1/hashes.cfg", "r")
+            # return len(text_file.readlines())
 
 
 
@@ -76,34 +90,39 @@ def ConfigFile():
 
 
 def getHashfromFile(tipoHash, archivos,comprueba=False):
+    hashes = []
+
     if tipoHash  == "SHA1":
-        hashes = []
         for archivo in archivos:
-            hash = hashlib.sha1(open(archivo).read().encode('utf-8'))
+            hash = hashlib.sha1(open(archivo,'rb').read())
             hashes.append(hash.hexdigest())
     elif tipoHash == "MD5":
-            hashes = []
-            for archivo in archivos:
-                hash = hashlib.md5(open(archivo).read().encode('utf-8'))
-                hashes.append(hash.hexdigest())
-    elif tipoHash == "SHA256":
-            hashes = []
-            for archivo in archivos:
-                hash = hashlib.sha256(open(archivo).read().encode('utf-8'))
-                hashes.append(hash.hexdigest())
-    elif tipoHash == "SHA512":
-        hashes = []
         for archivo in archivos:
-            hash = hashlib.sha512(open(archivo).read().encode('utf-8'))
+            hash = hashlib.md5(open(archivo,'rb').read())
+            hashes.append(hash.hexdigest())
+    elif tipoHash == "SHA256":
+        for archivo in archivos:
+            hash = hashlib.sha256(open(archivo, 'rb').read())
+            hashes.append(hash.hexdigest())
+    elif tipoHash == "SHA512":
+        for archivo in archivos:
+            hash = hashlib.sha512(open(archivo, 'rb').read())
             hashes.append(hash.hexdigest())
 
 
     if comprueba == False:
         logging.debug("Guardando nuevos hashes en el archivo de cofiguración")
-        text_file = open("/etc/SSII-PAI1/hashes.cfg", "w")
+        text_file = open("/etc/SSII-PAI1/hashes.cfg", "wb")
+        stringAguardar = ""
         for hash in hashes:
-            text_file.write(hash + "\n")
+            stringAguardar = stringAguardar+"{}\n".format(hash)
+        stringAguardar = stringAguardar[:-1]
+
+        logging.debug("hashesqueseguardanencryptados {}".format(stringAguardar))
+        encrypted = fernet.encrypt(stringAguardar.encode())
+        text_file.write(encrypted)
         text_file.close()
+
     else:
         compruebaSHAs(tipoHash, archivos)
 
@@ -117,27 +136,34 @@ def getHashfromFile(tipoHash, archivos,comprueba=False):
 
 
 def compruebaSHAs(tipoHash, archivos):
-    file = open("/etc/SSII-PAI1/hashes.cfg","r")
+    file = open("/etc/SSII-PAI1/hashes.cfg","rb")
+    encrypted = file.read()
+    file.close()
+    logging.debug("Encrypted: {}".format(encrypted))
+    decrypted = fernet.decrypt(encrypted)
+    logging.debug("Decrypted {}".format(decrypted.decode("utf-8")))
     hashesGuardados = []
-    for line in file:
+    for line in decrypted.decode("UTF-8").split('\n'):
+        logging.debug(line)
         hashesGuardados.append(line.strip("\n"))
 
     hahesArchivos = []
     if tipoHash == "SHA1":
         for archivo in archivos:
-            hash = hashlib.sha1(open(archivo).read().encode("UTF-8"))
+            hash = hashlib.sha1(open(archivo,'rb').read())
             hahesArchivos.append(hash.hexdigest())
+
     elif tipoHash == "MD5":
         for archivo in archivos:
-            hash = hashlib.md5(open(archivo).read().encode("UTF-8"))
+            hash = hashlib.md5(open(archivo,'rb').read())
             hahesArchivos.append(hash.hexdigest())
     elif tipoHash == "SHA256":
         for archivo in archivos:
-            hash = hashlib.sha256(open(archivo).read().encode("UTF-8"))
+            hash = hashlib.sha256(open(archivo,'rb').read())
             hahesArchivos.append(hash.hexdigest())
     elif tipoHash == "SHA512":
         for archivo in archivos:
-            hash = hashlib.sha512(open(archivo).read().encode("UTF-8"))
+            hash = hashlib.sha512(open(archivo,'rb').read())
             hahesArchivos.append(hash.hexdigest())
 
     logging.debug(hahesArchivos, hashesGuardados)
@@ -163,6 +189,8 @@ def generaIncidentes(fallos,archivos):
     for fallo in fallos:
         logging.warning("El archivo {} ha fallado".format(archivos[fallo]))
 
+
+
 def generaKPIs(fallos,archivos):
   pass
 
@@ -184,18 +212,10 @@ def configuraDemonio(tiempoString):
 
 
 
-def bucleDemonio():
-    ConfigFile()
-    logging.debug(tiempoEsperaDemonio)
-    sleep(tiempoEsperaDemonio)
-
-
-
-
 def main():
     while True:
         ConfigFile()
-        sleep(30)
+        sleep(tiempoEsperaDemonio)
 
 pid = "/tmp/test.pid"
 daemon = Daemonize(app="PAI1", pid=pid, action=main())
