@@ -1,6 +1,9 @@
 import hashlib
 import os
 import logging
+import matplotlib
+import matplotlib.pyplot as plt
+import time
 from cryptography.fernet import Fernet
 from time import sleep
 from daemonize import Daemonize
@@ -16,6 +19,8 @@ fernet = Fernet(key)
 
 tiempoEsperaDemonio = 30
 
+
+fallosActualesParaKPI = {time.time():0}
 
 
 def ConfigFile():
@@ -184,6 +189,19 @@ def compruebaSHAs(tipoHash, archivos):
 
 def todoBien():
     logging.debug("Todo bien de momento :)")
+    fallosActualesParaKPI[time.time()] = 0
+
+    t = list(fallosActualesParaKPI.keys())
+    s = list(fallosActualesParaKPI.values())
+
+    fig, ax = plt.subplots()
+    ax.plot(t, s)
+
+    ax.set(xlabel='Hora del reporte', ylabel='Cantidad de errores',
+           title='Número de errores cada vez que se comprueba')
+    ax.grid()
+    fig.savefig("graficakpis.png")
+    plt.show()
 
 def generaIncidentes(fallos,archivos):
     for fallo in fallos:
@@ -191,8 +209,21 @@ def generaIncidentes(fallos,archivos):
 
 
 
+
 def generaKPIs(fallos,archivos):
-  pass
+    fallosActualesParaKPI[time.time()] = len(fallos)
+
+    t = list(fallosActualesParaKPI.keys())
+    s = list(fallosActualesParaKPI.values())
+
+    fig, ax = plt.subplots()
+    ax.plot(t, s)
+
+    ax.set(xlabel='Hora del reporte', ylabel='Cantidad de errores',
+           title='Número de errores cada vez que se comprueba')
+    ax.grid()
+    fig.savefig("graficakpis.png")
+    plt.show()
 
 
 
