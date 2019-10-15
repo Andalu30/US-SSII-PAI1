@@ -4,6 +4,7 @@ import logging
 import matplotlib
 import matplotlib.pyplot as plt
 import datetime
+import requests
 from cryptography.fernet import Fernet
 from time import sleep
 from daemonize import Daemonize
@@ -26,9 +27,18 @@ fallosActualesParaKPI = {datetime.datetime.now():0}
 porcentajeActualesParaKPI = {datetime.datetime.now():0}
 
 
+def notificaError(msg, token=bot_token, chatID=bot_chatID):
+    logging.warning(msg)
+
+    send_text = 'https://api.telegram.org/bot' + token + '/sendMessage?chat_id=' + chatID + '&parse_mode=Markdown&text=' + msg
+    response = requests.get(send_text)
+
+
+
+
 def ConfigFile():
     def creaConfigFile():
-        logging.INFO("Creando archivo de configuracion en /etc/SSIIPAI1. Defina los archivos que hay que comprobar.")
+        logging.info("Creando archivo de configuracion en /etc/SSIIPAI1. Defina los archivos que hay que comprobar.")
         os.makedirs("/etc/SSII-PAI1/", 0o0755)
         string_config=";Algoritmo\n" \
                      "SHA1\n" \
@@ -36,7 +46,11 @@ def ConfigFile():
                      "1m\n" \
                      ";Nombre Fichero salida\n" \
                      "SSIIoutputKPI.pdf\n" \
-                      ";Ficheros\n"
+                     ";Token Bot Telegram\n"\
+                     "\n"\
+                     ";Chat id Telegram\n"\
+                     "\n"\
+                     ";Ficheros\n"
         text_file = open("/etc/SSII-PAI1/SSIIPAI1.cfg", "w")
         text_file.write(string_config)
         text_file.close()
@@ -57,8 +71,8 @@ def ConfigFile():
                 logging.debug(decrypted.decode("utf-8").split('\n'))
                 return len(decrypted.decode("utf-8").split('\n'))
             except:
-                logging.warning("Error al desencriptar el archivo de hashes. Creando uno nuevo")
                 os.remove("/etc/SSII-PAI1/hashes.cfg")
+                notificaError("Error al desencriptar el archivo de hashes. Creando uno nuevo")
                 return 0
 
 
@@ -75,7 +89,16 @@ def ConfigFile():
             if not li.startswith(";"):
                 argumentos.append(li)
                 line.rstrip()
-        archivos = argumentos[3:]
+
+        logging.debug(argumentos[3])
+        logging.debug(argumentos[4])
+
+        bot_token, bot_chatID = argumentos[3], argumentos[4]
+
+        logging.debug(bot_token)
+        logging.debug(bot_chatID)
+
+        archivos = argumentos[5:]
 
         logging.debug(argumentos[1])
         tiempoEsperaDemonio = configuraDemonio(argumentos[1])
@@ -106,23 +129,25 @@ def ConfigFile():
 def getHashfromFile(tipoHash, archivos,outputfilename,comprueba=False):
     hashes = []
 
-    if tipoHash  == "SHA1":
-        for archivo in archivos:
-            hash = hashlib.sha1(open(archivo,'rb').read())
-            hashes.append(hash.hexdigest())
-    elif tipoHash == "MD5":
-        for archivo in archivos:
-            hash = hashlib.md5(open(archivo,'rb').read())
-            hashes.append(hash.hexdigest())
-    elif tipoHash == "SHA256":
-        for archivo in archivos:
-            hash = hashlib.sha256(open(archivo, 'rb').read())
-            hashes.append(hash.hexdigest())
-    elif tipoHash == "SHA512":
-        for archivo in archivos:
-            hash = hashlib.sha512(open(archivo, 'rb').read())
-            hashes.append(hash.hexdigest())
-
+    try:
+        if tipoHash  == "SHA1":
+            for archivo in archivos:
+                hash = hashlib.sha1(open(archivo,'rb').read())
+                hashes.append(hash.hexdigest())
+        elif tipoHash == "MD5":
+            for archivo in archivos:
+                hash = hashlib.md5(open(archivo,'rb').read())
+                hashes.append(hash.hexdigest())
+        elif tipoHash == "SHA256":
+            for archivo in archivos:
+                hash = hashlib.sha256(open(archivo, 'rb').read())
+                hashes.append(hash.hexdigest())
+        elif tipoHash == "SHA512":
+            for archivo in archivos:
+                hash = hashlib.sha512(open(archivo, 'rb').read())
+                hashes.append(hash.hexdigest())
+    except:
+        notificaError("Error al leer los archivos que se deben comprobar")
 
     if comprueba == False:
         logging.info("Guardando nuevos hashes en el archivo de cofiguracion")
@@ -168,37 +193,43 @@ def compruebaSHAs(tipoHash, archivos,outputfilename):
         hashesGuardados.append(line.strip("\n"))
 
     hahesArchivos = []
-    if tipoHash == "SHA1":
-        for archivo in archivos:
-            hash = hashlib.sha1(open(archivo,'rb').read())
-            hahesArchivos.append(hash.hexdigest())
 
-    elif tipoHash == "MD5":
-        for archivo in archivos:
-            hash = hashlib.md5(open(archivo,'rb').read())
-            hahesArchivos.append(hash.hexdigest())
-    elif tipoHash == "SHA256":
-        for archivo in archivos:
-            hash = hashlib.sha256(open(archivo,'rb').read())
-            hahesArchivos.append(hash.hexdigest())
-    elif tipoHash == "SHA512":
-        for archivo in archivos:
-            hash = hashlib.sha512(open(archivo,'rb').read())
-            hahesArchivos.append(hash.hexdigest())
 
-    #logging.debug(hahesArchivos, hashesGuardados)
+    try:
 
-    fallos = []
-    for i in range(len(hahesArchivos)):
-        if hashesGuardados[i] != hahesArchivos[i]:
-            fallos.append(i)
+        if tipoHash == "SHA1":
+            for archivo in archivos:
+                hash = hashlib.sha1(open(archivo,'rb').read())
+                hahesArchivos.append(hash.hexdigest())
+
+        elif tipoHash == "MD5":
+            for archivo in archivos:
+                hash = hashlib.md5(open(archivo,'rb').read())
+                hahesArchivos.append(hash.hexdigest())
+        elif tipoHash == "SHA256":
+            for archivo in archivos:
+                hash = hashlib.sha256(open(archivo,'rb').read())
+                hahesArchivos.append(hash.hexdigest())
+        elif tipoHash == "SHA512":
+            for archivo in archivos:
+                hash = hashlib.sha512(open(archivo,'rb').read())
+                hahesArchivos.append(hash.hexdigest())
+
+        #logging.debug(hahesArchivos, hashesGuardados)
+
+        fallos = []
+        for i in range(len(hahesArchivos)):
+            if hashesGuardados[i] != hahesArchivos[i]:
+                fallos.append(i)
+            else:
+                continue
+
+        if len(fallos)!=0:
+            generaKPIs(fallos, archivos, outputfilename)
         else:
-            continue
-
-    if len(fallos)!=0:
-        generaKPIs(fallos, archivos, outputfilename)
-    else:
-        todoBien(outputfilename)
+            todoBien(outputfilename)
+    except:
+        notificaError("Error al leer los archivos")
 
 
 def todoBien(outputfilename):
@@ -249,6 +280,12 @@ def todoBien(outputfilename):
 
 
 def generaKPIs(fallos,archivos,outputfilename):
+
+    for fallo in fallos:
+        notificaError("El archivo {} ha fallado".format(archivos[fallo]))
+
+
+
     porcentaje = len(fallos)/len(archivos)*100
     logging.debug("Porcentaje de errores: {}".format(porcentaje))
 
