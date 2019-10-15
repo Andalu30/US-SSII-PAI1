@@ -12,11 +12,10 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 
 
-logFilename = "PAI1.log"
+logFilename = "/var/log/PAI1.log"
 logging.basicConfig(filename=logFilename,level=logging.DEBUG,format='%(asctime)s:%(levelname)s:%(message)s')
 
 key = Fernet.generate_key()
-logging.debug(key) #TODO: quitar esto para seguridad
 fernet = Fernet(key)
 
 
@@ -26,8 +25,11 @@ tiempoEsperaDemonio = 30
 fallosActualesParaKPI = {datetime.datetime.now():0}
 porcentajeActualesParaKPI = {datetime.datetime.now():0}
 
+bot_token = ''
+bot_chatID = ''
 
-def notificaError(msg, token=bot_token, chatID=bot_chatID):
+
+def notificaError(msg, token='', chatID=''):
     logging.warning(msg)
 
     send_text = 'https://api.telegram.org/bot' + token + '/sendMessage?chat_id=' + chatID + '&parse_mode=Markdown&text=' + msg
@@ -72,7 +74,7 @@ def ConfigFile():
                 return len(decrypted.decode("utf-8").split('\n'))
             except:
                 os.remove("/etc/SSII-PAI1/hashes.cfg")
-                notificaError("Error al desencriptar el archivo de hashes. Creando uno nuevo")
+                notificaError("Error al desencriptar el archivo de hashes. Creando uno nuevo",bot_token,bot_chatID)
                 return 0
 
 
@@ -147,7 +149,7 @@ def getHashfromFile(tipoHash, archivos,outputfilename,comprueba=False):
                 hash = hashlib.sha512(open(archivo, 'rb').read())
                 hashes.append(hash.hexdigest())
     except:
-        notificaError("Error al leer los archivos que se deben comprobar")
+        notificaError("Error al leer los archivos que se deben comprobar",bot_token,bot_chatID)
 
     if comprueba == False:
         logging.info("Guardando nuevos hashes en el archivo de cofiguracion")
@@ -229,7 +231,7 @@ def compruebaSHAs(tipoHash, archivos,outputfilename):
         else:
             todoBien(outputfilename)
     except:
-        notificaError("Error al leer los archivos")
+        notificaError("Error al leer los archivos",bot_token,bot_chatID)
 
 
 def todoBien(outputfilename):
@@ -282,7 +284,7 @@ def todoBien(outputfilename):
 def generaKPIs(fallos,archivos,outputfilename):
 
     for fallo in fallos:
-        notificaError("El archivo {} ha fallado".format(archivos[fallo]))
+        notificaError("El archivo {} ha fallado".format(archivos[fallo]),bot_token,bot_chatID)
 
 
 
