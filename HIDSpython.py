@@ -19,7 +19,7 @@ key = Fernet.generate_key()
 fernet = Fernet(key)
 
 
-tiempoEsperaDemonio = 30
+tiempoEsperaDemonio = 60*5
 
 
 fallosActualesParaKPI = {datetime.datetime.now():0}
@@ -29,7 +29,7 @@ bot_token = ''
 bot_chatID = ''
 
 
-def notificaError(msg, token='', chatID=''):
+def notificaError(msg, token=bot_token, chatID=bot_chatID):
     logging.warning(msg)
 
     send_text = 'https://api.telegram.org/bot' + token + '/sendMessage?chat_id=' + chatID + '&parse_mode=Markdown&text=' + msg
@@ -45,7 +45,7 @@ def ConfigFile():
         string_config=";Algoritmo\n" \
                      "SHA1\n" \
                      ";Tiempo\n" \
-                     "1m\n" \
+                     "5m\n" \
                      ";Nombre Fichero salida\n" \
                      "SSIIoutputKPI.pdf\n" \
                      ";Token Bot Telegram\n"\
@@ -56,7 +56,6 @@ def ConfigFile():
         text_file = open("/etc/SSII-PAI1/SSIIPAI1.cfg", "w")
         text_file.write(string_config)
         text_file.close()
-        tiempoEsperaDemonio=60
 
     def leeConfigFile():
 
@@ -70,7 +69,8 @@ def ConfigFile():
                 decrypted = fernet.decrypt(encrypted)
                 logging.debug(decrypted.decode('utf-8'))
                 logging.debug("CantidadHashesGuardados: {}".format(len(decrypted.decode("utf-8").split('\n'))))
-                logging.debug(decrypted.decode("utf-8").split('\n'))
+                logging.debug(decryptiempoEsperaDemonio = 60*5
+ted.decode("utf-8").split('\n'))
                 return len(decrypted.decode("utf-8").split('\n'))
             except:
                 os.remove("/etc/SSII-PAI1/hashes.cfg")
@@ -95,6 +95,7 @@ def ConfigFile():
         logging.debug(argumentos[3])
         logging.debug(argumentos[4])
 
+        global bot_token, bot_chatID
         bot_token, bot_chatID = argumentos[3], argumentos[4]
 
         logging.debug(bot_token)
@@ -103,6 +104,8 @@ def ConfigFile():
         archivos = argumentos[5:]
 
         logging.debug(argumentos[1])
+
+        global tiempoEsperaDemonio
         tiempoEsperaDemonio = configuraDemonio(argumentos[1])
 
 
@@ -363,7 +366,7 @@ def configuraDemonio(tiempoString):
     elif tiempoString.endswith("d"):
         tiempo = 3600*24*tiempoString[:-1]
         logging.debug("Tiempo: {}".format(tiempo))
-    return tiempo
+    return int(tiempo)
 
 
 
